@@ -131,9 +131,16 @@ used directly.
 **Delegation via prompt**
 
 First, the main one you are probably interested in - delegation to sub-assistants. Its easy to set up and
-also to listen to events and add into your current workflow.
-
-```javascript
+try {
+  const OpenAIClient = new OpenAI({
+    apiKey: process.env.OPEN_AI_KEY,
+    baseURL: process.env.OPENAI_BASE_URL, // e.g. 
+  });
+  await OpenAIClient.beta.assistants.list(); // Test connection
+} catch (error) {
+  console.error('Failed to connect to OpenAI endpoint:', error.message);
+  // Handle connection error appropriately
+}
 // Set up an event listener for when the parent response is completed so you don't have to wait
 // for parent + children responses to all complete.
 // Useful to return the parent response early while you work on the subtask tool_calls that
