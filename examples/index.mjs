@@ -1,20 +1,21 @@
-import 'dotenv/config';
-import OpenAI from 'openai';
-import { EnableSwarmAbilities } from 'openai-assistant-swarm';
+import "dotenv/config";
+import OpenAI from "openai";
+import { EnableSwarmAbilities } from "openai-assistant-swarm";
 
-// Enable the client for OpenAi as you normally would
-const OpenAIClient = (
-    new OpenAI({
-        apiKey: process.env.OPEN_AI_KEY
-    }));
+// Enable the client for OpenAI (or any OpenAI-compatible API)
+// `OPENAI_BASE_URL` allows pointing to services like AnythingLLM or LM Studio
+const OpenAIClient = new OpenAI({
+  apiKey: process.env.OPEN_AI_KEY,
+  baseURL: process.env.OPENAI_BASE_URL,
+});
 
 // The simply call this function on the client to extend the OpenAI SDK to now have
 // OpenAIClient.beta.assistants.swarm functions available.
 EnableSwarmAbilities(OpenAIClient, {
-    debug: true,
-    managerAssistantOptions: {
-        model: 'gpt-4-1106-preview'
-    }
+  debug: true,
+  managerAssistantOptions: {
+    model: "gpt-4-1106-preview",
+  },
 });
 
 // Initialize the swarm manager to create the swarm manager and also register it with
@@ -53,21 +54,23 @@ await OpenAIClient.beta.assistants.swarm.init();
 //     console.groupEnd();
 // });
 
-OpenAIClient.beta.assistants.swarm.emitter.on('poll_event', ({ data }) => {
-    console.group('Generic status event - see types for what is available');
-    console.log({
-        status: data.status,
-        text: data.prompt || data.textResponse,
-        runId: data?.run?.id,
-        link: data.playground,
-        runStatus: data?.run?.status,
-    })
-    console.log('\n\n')
-    console.groupEnd();
+OpenAIClient.beta.assistants.swarm.emitter.on("poll_event", ({ data }) => {
+  console.group("Generic status event - see types for what is available");
+  console.log({
+    status: data.status,
+    text: data.prompt || data.textResponse,
+    runId: data?.run?.id,
+    link: data.playground,
+    runStatus: data?.run?.status,
+  });
+  console.log("\n\n");
+  console.groupEnd();
 });
 
 // Run the main process on a single text prompt to have work delegate between all of your assistants that are available.
-OpenAIClient.beta.assistants.swarm.delegateWithPrompt('What is the weather in New York city right now? Also what is the top stock for today?');
+OpenAIClient.beta.assistants.swarm.delegateWithPrompt(
+  "What is the weather in New York city right now? Also what is the top stock for today?",
+);
 // For example. Given a Pirate bot, Weather Bot, and Stock Bot
 // Run threads in parallel and return to you!
 // |--> Will delegate to an existing Weather Bot
