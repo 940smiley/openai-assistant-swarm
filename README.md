@@ -22,28 +22,33 @@
 </p>
 
 ## What is the Swarm Manager
+
 OpenAI's assistant API unlocks an incredible convience for developers who are building autonomous AI assistants or commonly called "Agents". This Node JS Library unlocks your entire registry of custom agents and their functions via a single API call. One agent "manager" can now easily delegate work to one or many other assistants in parallel in a smart and quick way so you can handle actions from delegated tasks easily.
 
 All of the mental overhead of managing which assistant does what is now handled and wrapped up with a bow.
 
 ## How does it work?
+
 The Swarm Manager acts as an extension of the OpenAI NodeJS SDK - making available a new `.swarm` method available on `beta.assistants`.
 
 First, install the openai SDK for NodeJS
+
 ```shell
 yarn add openai
-# or 
+# or
 npm install openai
 ```
 
 Next install the `openai-assistant-swarm` package
+
 ```shell
 yarn add @mintplex-labs/openai-assistant-swarm
-# or 
+# or
 npm install @mintplex-labs/openai-assistant-swarm
 ```
 
 Now use the SDK as you normally would and run the extension function and initialize the agent swarm manager.
+
 ```javascript
 // Enable the client for OpenAi as you normally would
 const OpenAIClient = (
@@ -72,17 +77,20 @@ await OpenAIClient.beta.assistants.swarm.init();
 ## A simple example
 
 An full example delegating a single input between 3 available assistants...
+
 ```javascript
-import OpenAI from 'openai';
-import { EnableSwarmAbilities } from '@mintplex-labs/openai-assistant-swarm';
-const OpenAIClient = new OpenAI({apiKey: process.env.OPEN_AI_KEY});
+import OpenAI from "openai";
+import { EnableSwarmAbilities } from "@mintplex-labs/openai-assistant-swarm";
+const OpenAIClient = new OpenAI({ apiKey: process.env.OPEN_AI_KEY });
 EnableSwarmAbilities(OpenAIClient);
 await OpenAIClient.beta.assistants.swarm.init();
 
 // Optional - set up listeners here to wait for specific events to return to the user since streaming is not available yet.
 
 // Run the main process on a single text prompt to have work delegate between all of your assistants that are available.
-const response = OpenAIClient.beta.assistants.swarm.delegateWithPrompt('What is the weather in New York city right now? Also what is the top stock for today?');
+const response = OpenAIClient.beta.assistants.swarm.delegateWithPrompt(
+  "What is the weather in New York city right now? Also what is the top stock for today?",
+);
 // For example. Given a Pirate bot, Weather Bot, and Stock Bot in your assistant registry on OpenAI.
 // Run the below threads in parallel and return to you!
 // |--> Will delegate to an existing Weather Bot
@@ -96,63 +104,97 @@ const response = OpenAIClient.beta.assistants.swarm.delegateWithPrompt('What is 
 console.log({
   parentRun: response.parentRun, // All information about the parent thread
   subRuns: response.subRuns, // array of runs created and their status for each spun-out child thread!
-})
-
+});
 ```
+
+## Using OpenAI-compatible endpoints
+
+`openai-assistant-swarm` talks to the OpenAI Assistants API. Services like
+[AnythingLLM](https://github.com/Mintplex-Labs/anything-llm) or
+[LM Studio](https://lmstudio.ai/) can expose OpenAI-compatible HTTP endpoints.
+Point the OpenAI client to those services by setting a custom `baseURL` when
+creating the client:
+
+```javascript
+const OpenAIClient = new OpenAI({
+  apiKey: process.env.OPEN_AI_KEY,
+  baseURL: process.env.OPENAI_BASE_URL, // e.g. http://localhost:1234/v1
+});
+```
+
+The swarm manager requires the target service to implement the Assistants API.
+Providers without Assistants support (for example, Gemini as of today) cannot be
+used directly.
 
 ## Available tools
 
 **Delegation via prompt**
 
 First, the main one you are probably interested in - delegation to sub-assistants. Its easy to set up and
-also to listen to events and add into your current workflow.
-```javascript
+try {
+  const OpenAIClient = new OpenAI({
+    apiKey: process.env.OPEN_AI_KEY,
+    baseURL: process.env.OPENAI_BASE_URL, // e.g. 
+  });
+  await OpenAIClient.beta.assistants.list(); // Test connection
+} catch (error) {
+  console.error('Failed to connect to OpenAI endpoint:', error.message);
+  // Handle connection error appropriately
+}
 // Set up an event listener for when the parent response is completed so you don't have to wait
 // for parent + children responses to all complete.
-// Useful to return the parent response early while you work on the subtask tool_calls that 
+// Useful to return the parent response early while you work on the subtask tool_calls that
 // may or not be required depending on what happened.
-OpenAIClient.beta.assistants.swarm.emitter.on('parent_assistant_complete', (args) => {
-    console.group('Parent assistant response completed');
-    console.log(args.parentRun.playground) // => https://platform.openai.com/playground.... to debug thread & run in browser.
-    console.log(args.parentRun.textResponse) // => Yarrh! Want to be speaking to the captain do ya? Ill go fetch them ya land lubber.
+OpenAIClient.beta.assistants.swarm.emitter.on(
+  "parent_assistant_complete",
+  (args) => {
+    console.group("Parent assistant response completed");
+    console.log(args.parentRun.playground); // => https://platform.openai.com/playground.... to debug thread & run in browser.
+    console.log(args.parentRun.textResponse); // => Yarrh! Want to be speaking to the captain do ya? Ill go fetch them ya land lubber.
     // args.parentRun => The full Run object from OpenAI so you can get the thread_id and other properties like status.
-    console.log('\n\n')
+    console.log("\n\n");
     console.groupEnd();
-});
+  },
+);
 
 // Set up an event listener for when the delegated assistant responses are completed so you don't have to wait
 // for parent + children responses to all complete.
 // From here you can handle all sub-run tool_calls if they are required to be run.
-OpenAIClient.beta.assistants.swarm.emitter.on('child_assistants_complete', (args) => {
-    console.group('Child assistant response completed');
-    console.log(args.subRuns.map((run) => run.textResponse)) // => Yarrh! I am the captain of this vessel. Ye be after my treasure, Yar?
-    console.log(args.subRuns.map((run) => run.playground)) // => https://platform.openai.com/playground.... to debug thread & run in browser.
+OpenAIClient.beta.assistants.swarm.emitter.on(
+  "child_assistants_complete",
+  (args) => {
+    console.group("Child assistant response completed");
+    console.log(args.subRuns.map((run) => run.textResponse)); // => Yarrh! I am the captain of this vessel. Ye be after my treasure, Yar?
+    console.log(args.subRuns.map((run) => run.playground)); // => https://platform.openai.com/playground.... to debug thread & run in browser.
     // args.subRuns[x].run => The full Run object from OpenAI so you can get the thread_id and other properties like status.
-    console.log('\n\n')
+    console.log("\n\n");
     console.groupEnd();
-});
+  },
+);
 
 // Set up and event listener to see every step event as it is completed:
-OpenAIClient.beta.assistants.swarm.emitter.on('poll_event', ({ data }) => {
-    console.group('Poll event!');
-    console.log({
-        status: data.status,
-        text: data.prompt || data.textResponse,
-        runId: data?.run?.id,
-        link: data.playground,
-        runStatus: data?.run?.status,
-    })
-    console.log('\n\n')
-    console.groupEnd();
+OpenAIClient.beta.assistants.swarm.emitter.on("poll_event", ({ data }) => {
+  console.group("Poll event!");
+  console.log({
+    status: data.status,
+    text: data.prompt || data.textResponse,
+    runId: data?.run?.id,
+    link: data.playground,
+    runStatus: data?.run?.status,
+  });
+  console.log("\n\n");
+  console.groupEnd();
 });
 
 // Run the main process on a single text prompt to have work delegate between all of the possible assistants that are available.
-const response = OpenAIClient.beta.assistants.swarm.delegateWithPrompt('Let me speak to the head pirate of this vessel! What say ye??');
+const response = OpenAIClient.beta.assistants.swarm.delegateWithPrompt(
+  "Let me speak to the head pirate of this vessel! What say ye??",
+);
 // You can also just wait for the entire flow to finish instead of setting up listeners to keep the code more synchronous
 console.log({
   parentRun: response.parentRun,
   subRuns: response.subRuns,
-})
+});
 
 // You can also focus the given task or prompt on a subset of assistants that you know you want to handle delegated work.
 // OpenAIClient.beta.assistants.swarm.delegateWithPrompt('Let me speak to the head pirate of this vessel! What say ye??', ['asst_lead_pirate']);
@@ -161,6 +203,7 @@ console.log({
 **Get all available assistants**
 
 Right now, you need to paginate assitants to see who is around to answer a question or handle a task. Now, you can just make one call and we handle pagination for you
+
 ```javascript
 const allAssistants = await OpenAIClient.beta.assistants.swarm.allAssistants();
 console.log(`Found ${allAssistants.length} assistants for this OpenAI Account`);
@@ -170,10 +213,18 @@ console.log(`Found ${allAssistants.length} assistants for this OpenAI Account`);
 **Get many known assistants at once**
 
 You are limited to fetching one assistant at a time via the API. Now you can get many at once
+
 ```javascript
-const assistantIds = ['asst_customer_success', 'asst_lead_pirate_manager', 'asst_that_was_deleted' ]
-const specificAssistants = await OpenAIClient.beta.assistants.swarm.getAssistants(assistantIds);
-console.log(`Found ${specificAssistants.length} assistants from ${assistantIds.length} ids given.`);
+const assistantIds = [
+  "asst_customer_success",
+  "asst_lead_pirate_manager",
+  "asst_that_was_deleted",
+];
+const specificAssistants =
+  await OpenAIClient.beta.assistants.swarm.getAssistants(assistantIds);
+console.log(
+  `Found ${specificAssistants.length} assistants from ${assistantIds.length} ids given.`,
+);
 // Will be an array of assistant objects you can filter or manage. The Swarm Manager will not appear here.
 // Invalid assistants will not appear in the end result.
 ```
