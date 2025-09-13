@@ -6,11 +6,12 @@ import { EnableSwarmAbilities } from "openai-assistant-swarm";
 // `OPENAI_BASE_URL` allows pointing to services like AnythingLLM or LM Studio
 const OpenAIClient = new OpenAI({
   apiKey: process.env.OPEN_AI_KEY,
-  baseURL: process.env.OPENAI_BASE_URL,
+const OpenAIClient = new OpenAI({
+  apiKey: process.env.OPEN_AI_KEY,
+  baseURL: process.env.OPENAI_BASE_URL?.endsWith('/v1') 
+    ? process.env.OPENAI_BASE_URL 
+    : `${process.env.OPENAI_BASE_URL}/v1`,
 });
-
-// The simply call this function on the client to extend the OpenAI SDK to now have
-// OpenAIClient.beta.assistants.swarm functions available.
 EnableSwarmAbilities(OpenAIClient, {
   debug: true,
   managerAssistantOptions: {
